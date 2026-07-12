@@ -1,0 +1,29 @@
+services:
+
+  caddy:
+    image: caddy:2
+
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+
+    depends_on:
+      - website
+      - send
+
+  website:
+    image: ghcr.io/mastermetarn/norum-web:latest
+
+    restart: unless-stopped
+
+  send:
+    image: ghcr.io/mastermetarn/send:latest
+
+    restart: unless-stopped

@@ -1,0 +1,7 @@
+norum.se, www.norum.se {
+    handle /send* {
+        reverse_proxy send:3000
+    }
+
+    reverse_proxy website:80
+}
