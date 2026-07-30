@@ -161,6 +161,15 @@ h2 {
     background: linear-gradient(135deg, #3368d3, #2756b4);
 }
 
+/* icon inside buttons */
+.btn .icon {
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    vertical-align: middle;
+    flex: 0 0 auto;
+}
+
 
 .list {
     list-style: none;
