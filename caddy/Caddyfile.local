@@ -1,6 +1,4 @@
-norum.se, www.norum.se {
-	redir /rate-limit /rate-limit/ 308
-
+http://localhost {
 	handle_path /rate-limit/* {
 		reverse_proxy rate-limit-demo:3000
 	}

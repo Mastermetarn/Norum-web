@@ -1,0 +1,12 @@
+services:
+  caddy:
+    volumes:
+      - ./caddy/Caddyfile.local:/etc/caddy/Caddyfile
+
+  website:
+    build: ./landingpage
+    image: norum-web:local
+
+  rate-limit-demo:
+    build: ../rate-limit-demo
+    image: rate-limit-demo:local

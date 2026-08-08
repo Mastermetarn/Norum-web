@@ -17,6 +17,7 @@ services:
     depends_on:
       - website
       - send
+      - rate-limit-demo
 
   website:
     image: ghcr.io/mastermetarn/norum-web:latest
@@ -25,5 +26,10 @@ services:
 
   send:
     image: ghcr.io/mastermetarn/send:latest
+
+    restart: unless-stopped
+
+  rate-limit-demo:
+    image: ghcr.io/mastermetarn/rate-limit-demo:latest
 
     restart: unless-stopped
