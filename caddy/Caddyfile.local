@@ -1,6 +1,14 @@
 http://localhost {
+	redir /rate-limit /rate-limit/ 308
+
 	handle_path /rate-limit/* {
 		reverse_proxy rate-limit-demo:3000
+	}
+
+	redir /blackjack /blackjack/ 308
+
+	handle_path /blackjack/* {
+		reverse_proxy blackjack:8989
 	}
 
 	handle /send* {
