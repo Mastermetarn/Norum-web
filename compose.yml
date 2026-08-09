@@ -18,6 +18,7 @@ services:
       - website
       - send
       - rate-limit-demo
+      - blackjack
 
   website:
     image: ghcr.io/mastermetarn/norum-web:latest
@@ -33,3 +34,20 @@ services:
     image: ghcr.io/mastermetarn/rate-limit-demo:latest
 
     restart: unless-stopped
+
+  blackjack:
+    image: ghcr.io/mastermetarn/adrino-alesive-project:latest
+
+    restart: unless-stopped
+
+    environment:
+      PORT: "8989"
+      DATA_DIR: /app/data
+      RESET_DATA_ON_START: "true"
+      TZ: Europe/Stockholm
+
+    volumes:
+      - blackjack-data:/app/data
+
+volumes:
+  blackjack-data:

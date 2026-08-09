@@ -5,6 +5,12 @@ norum.se, www.norum.se {
 		reverse_proxy rate-limit-demo:3000
 	}
 
+	redir /blackjack /blackjack/ 308
+
+	handle_path /blackjack/* {
+		reverse_proxy blackjack:8989
+	}
+
 	handle /send* {
 		reverse_proxy send:3000
 	}

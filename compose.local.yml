@@ -7,6 +7,24 @@ services:
     build: ./landingpage
     image: norum-web:local
 
+  send:
+    build: ../Send/application
+    image: send:local
+    environment:
+      SESSION_COOKIE_SECURE: "false"
+    volumes:
+      - send-data:/app/data
+
   rate-limit-demo:
     build: ../rate-limit-demo
     image: rate-limit-demo:local
+
+  blackjack:
+    build:
+      context: ../Blackjack
+      args:
+        BASE_PATH: /blackjack/
+    image: adrino-alesive-project:local
+
+volumes:
+  send-data:
