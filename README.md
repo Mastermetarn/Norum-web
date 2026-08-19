@@ -1,121 +1,149 @@
 # Norum-web
 
-Norum.se portfolio and Caddy deployment configuration.
+The source and deployment configuration for [norum.se](https://norum.se), a personal software portfolio hosting several web applications behind a single HTTPS endpoint.
 
-The production Compose stack exposes four applications:
+## Live applications
 
-- `/` - portfolio website
-- `/send` - Send application
-- `/rate-limit/` - interactive API rate limiting demo
-- `/blackjack/` - real-time multiplayer blackjack school project
+| Application           | Description                                    | Link                                                 |
+| --------------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| Portfolio             | Personal portfolio and project overview        | [norum.se](https://norum.se)                         |
+| Send                  | End-to-end encrypted message sharing           | [norum.se/send](https://norum.se/send)               |
+| Rate Limit Demo       | Interactive demonstration of API rate limiting | [norum.se/rate-limit/](https://norum.se/rate-limit/) |
+| Multiplayer Blackjack | Real-time multiplayer KTH project              | [norum.se/blackjack/](https://norum.se/blackjack/)   |
 
-## Publish application images to GHCR
+## About the project
 
-The VPS runs Linux AMD64 images from GitHub Container Registry. Caddy uses the
-official `caddy:2` image and is not built or published from this repository.
+Norum-web contains the portfolio landing page and the infrastructure used to combine four applications into one deployment.
 
-Create a GitHub personal access token (classic) with the `write:packages` scope,
-store it temporarily in `GHCR_TOKEN`, and sign in:
+The repository includes:
 
-```sh
-export GHCR_TOKEN=YOUR_GITHUB_TOKEN
-printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u Mastermetarn --password-stdin
+- A static portfolio served by Nginx
+- A Docker Compose production stack
+- Caddy reverse-proxy and HTTPS configuration
+- A local Compose override for running the complete stack
+- Routing for regular HTTP and WebSocket traffic
+
+Send, the rate-limit demo, and Blackjack are maintained as separate application codebases. Their production images are published to GitHub Container Registry and consumed by this deployment.
+
+## Architecture
+
+```text
+Browser
+   |
+   | HTTPS
+   v
+Caddy
+   |-- /             -> Portfolio (Nginx)
+   |-- /send         -> Send
+   |-- /rate-limit/  -> Rate Limit Demo
+   `-- /blackjack/   -> Multiplayer Blackjack
 ```
 
-From the Norum-web root, build and push every application image used by
-`compose.yml`:
+Caddy terminates TLS and routes requests to the appropriate service over the private Docker Compose network. The application containers do not publish their internal ports directly on the production host.
 
-```sh
-docker buildx build --platform linux/amd64 -t ghcr.io/mastermetarn/norum-web:latest --push ./landingpage
-docker buildx build --platform linux/amd64 -t ghcr.io/mastermetarn/send:latest --push ../Send/application
-docker buildx build --platform linux/amd64 -t ghcr.io/mastermetarn/rate-limit-demo:latest --push ../rate-limit-demo
-docker buildx build --platform linux/amd64 -t ghcr.io/mastermetarn/adrino-alesive-project:latest --push ../Blackjack
+Production images are built for Linux AMD64, stored in GitHub Container Registry, and pulled by the production Compose stack.
+
+## Technology
+
+- Docker and Docker Compose
+- Caddy
+- Nginx
+- GitHub Container Registry
+- Linux
+- HTTPS/TLS
+- Reverse-proxy routing
+- WebSocket proxying
+
+## Applications
+
+### Portfolio
+
+The portfolio is a static website served by Nginx. It presents selected software projects and provides links to their live deployments.
+
+### Send
+
+Send is an end-to-end encrypted message-sharing application. Caddy forwards requests under `/send` to its standalone application container without removing the path prefix.
+
+### Rate Limit Demo
+
+The rate-limit demo is an interactive Express application demonstrating a token-bucket rate limiter.
+
+It supports:
+
+- Automatically issued demo API keys
+- A bucket capacity of 100 tokens
+- Continuous refill at 100 tokens per minute
+- Single-request and request-flood controls
+- HTTP `429 Too Many Requests` responses
+- `Retry-After` headers
+- Live request and token statistics
+
+Caddy removes the `/rate-limit/` prefix before forwarding requests to the application.
+
+### Multiplayer Blackjack
+
+Blackjack is a real-time multiplayer KTH project with accounts, persistent balances, lobbies, and synchronized game state.
+
+The application uses Socket.IO for real-time communication. Caddy removes the `/blackjack/` prefix and proxies both HTTP and WebSocket traffic to the application container.
+
+Demo data is cleared when the production container restarts and automatically each night.
+
+## Repository structure
+
+```text
+.
+|-- landingpage/
+|   |-- html/              # Portfolio pages and static assets
+|   |-- nginx.conf         # Nginx configuration
+|   `-- Dockerfile         # Portfolio container image
+|-- caddy/
+|   |-- Caddyfile          # Production HTTPS and routing configuration
+|   `-- Caddyfile.local    # Local HTTP configuration
+|-- compose.yml            # Production stack
+|-- compose.local.yml      # Local build and routing overrides
+|-- DEPLOYMENT.md          # Publishing and deployment runbook
+`-- README.md
 ```
 
-To publish only Send after changing it:
+## Run the portfolio locally
+
+Build the portfolio image from the repository root:
 
 ```sh
-docker buildx build --platform linux/amd64 -t ghcr.io/mastermetarn/send:latest --push ../Send/application
+docker build -t norum-web:local ./landingpage
 ```
 
-Verify the published AMD64 manifests:
+Start the container:
 
 ```sh
-docker buildx imagetools inspect ghcr.io/mastermetarn/norum-web:latest
-docker buildx imagetools inspect ghcr.io/mastermetarn/send:latest
-docker buildx imagetools inspect ghcr.io/mastermetarn/rate-limit-demo:latest
-docker buildx imagetools inspect ghcr.io/mastermetarn/adrino-alesive-project:latest
+docker run --rm -p 8080:80 norum-web:local
 ```
 
-The first manually published GHCR package is private by default. Configure its
-visibility and repository access in GitHub Packages as needed. Do not commit or
-paste the token into this repository; unset it when publishing is complete:
+Open [http://localhost:8080](http://localhost:8080).
 
-```sh
-unset GHCR_TOKEN
-```
+## Run the complete stack locally
 
-## Build the portfolio image locally
+The local environment expects the Send, rate-limit demo, and Blackjack repositories at the sibling paths configured in `compose.local.yml`.
 
-Run from `landingpage/`:
-
-```sh
-docker build -t ghcr.io/mastermetarn/norum-web:latest .
-```
-
-Run locally:
-
-```sh
-docker run --rm -p 8080:80 ghcr.io/mastermetarn/norum-web:latest
-```
-
-## Rate limit demo
-
-The standalone app source lives in the sibling repository `../rate-limit-demo`.
-Its own README covers the API, tests, and local development.
-
-## Send
-
-The standalone Send source lives in `../Send/application`. Its production image
-is `ghcr.io/mastermetarn/send:latest`, and Caddy proxies `/send*` without
-stripping the prefix.
-
-## Blackjack school project
-
-The standalone app source lives in the sibling directory `../Blackjack` and is
-published as `ghcr.io/mastermetarn/adrino-alesive-project:latest`.
-
-The app listens over plain HTTP inside the Compose network. Caddy terminates HTTPS, removes the `/blackjack` prefix, and proxies HTTP and Socket.IO traffic to the app on port 8989.
-
-The Compose service sets `RESET_DATA_ON_START=true`. Starting or restarting the
-Blackjack container clears its account, game, and session databases before the
-server starts. The application also clears all data nightly at 03:00
-Europe/Stockholm time.
-
-## Deploy on the VPS
-
-```sh
-docker compose pull
-docker compose up -d
-```
-
-Caddy redirects prefix-less app URLs to their trailing-slash forms, removes the prefixes, and proxies each request to its standalone app.
-
-## Run the full stack locally
-
-The local override builds the portfolio, Send, rate limit demo, and Blackjack
-from their local source directories and serves them through Caddy without HTTPS:
+Start the complete stack:
 
 ```sh
 docker compose -f compose.yml -f compose.local.yml up -d --build
 ```
 
-Open the portfolio at <http://localhost>, Send at <http://localhost/send>, the
-rate limit demo at <http://localhost/rate-limit/>, and blackjack at
-<http://localhost/blackjack/>.
+The applications will be available at:
 
-Stop the local stack with:
+- Portfolio: [http://localhost](http://localhost)
+- Send: [http://localhost/send](http://localhost/send)
+- Rate Limit Demo: [http://localhost/rate-limit/](http://localhost/rate-limit/)
+- Blackjack: [http://localhost/blackjack/](http://localhost/blackjack/)
+
+Stop the stack:
 
 ```sh
 docker compose -f compose.yml -f compose.local.yml down
 ```
+
+## Deployment
+
+Image publishing, production deployment, registry authentication, and operational instructions are documented separately in [DEPLOYMENT.md](DEPLOYMENT.md).
